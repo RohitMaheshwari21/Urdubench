@@ -12,3 +12,4 @@ __pycache__/
 *.tsbuildinfo
 data/test/*
 !data/test/.gitkeep.cache/
+data/candidates/
