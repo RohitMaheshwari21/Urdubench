@@ -11,6 +11,10 @@ dependencies = ["jsonschema>=4.20"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6"]
+llm = ["litellm>=1.50"]
+
+[project.scripts]
+urdubench = "urdubench.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["urdubench*"]
