@@ -11,5 +11,6 @@ __pycache__/
 .vercel/
 *.tsbuildinfo
 data/test/*
-!data/test/.gitkeep.cache/
+!data/test/.gitkeep
+.cache/
 data/candidates/
