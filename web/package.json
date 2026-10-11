@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "sync-data": "node scripts/sync-data.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
