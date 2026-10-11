@@ -14,3 +14,9 @@ data/test/*
 !data/test/.gitkeep
 .cache/
 data/candidates/
+
+# private benchmark data must never be committed, wherever a copy ends up
+.github/workflows/candidates/
+**/candidates/
+**/answer_key.csv
+**/review_reviewer*.csv
