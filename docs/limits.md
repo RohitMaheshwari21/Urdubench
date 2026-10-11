@@ -59,3 +59,16 @@ Not chosen yet. Model, embedding provider and prices are decided in Phase 4 (ben
 
 ## Local toolchain used for Phase 0
 Node 24.12, npm 11.6, Python 3.14.2 locally (package supports >=3.11, CI uses 3.11), Next.js 16.4.0, React 19.3.0, Vitest 5.0.3.
+## Free LLM tiers for benchmark runs (verified 2026-10-11)
+
+Sources: https://console.groq.com/docs/models, https://console.groq.com/docs/rate-limits, https://console.groq.com/docs/your-data, https://ai.google.dev/gemini-api/terms, https://ai.google.dev/gemini-api/docs/rate-limits
+
+**Data terms decide which split may be sent where**
+- **Groq:** official docs say inference inputs are not retained by default (kept only for features that need it, or for reliability and abuse investigation); third-party summaries of its terms say customer data is not used for training. Confirm the Data Controls setting in your console before sending the private test split. OK for dev; acceptable for test after that check.
+- **Gemini free (unpaid) tier:** Google's terms say content and responses are used to improve and develop its products, and human reviewers may read them. **Use for the public dev split only. Never send the private test split to the free Gemini tier.** (The paid tier and users in the EEA, Switzerland and the UK are covered by the no-training terms.)
+
+**Groq models seen on the models page** (production): `llama-3.1-8b-instant`, `llama-3.3-70b-versatile`, `openai/gpt-oss-120b`, `openai/gpt-oss-20b`; (preview, evaluation only): `qwen/qwen3.8-27b`, `minimaxai/minimax-m2.7`. LiteLLM id form: `groq/<model-id>`. The page does not state Urdu support, so results are exploratory.
+**Groq limits:** the rate-limits page shows a table that may be the Developer plan, not Free. For `openai/gpt-oss-*` and `qwen/qwen3.8-27b` it lists 30 requests/min, 1,000 requests/day, 8K tokens/min, 200K tokens/day. Check your own free limits at console.groq.com/settings/limits. A full dev run (150 items, 4 tasks) is about 30K input tokens per model.
+**Gemini:** the docs page gives no free-tier numbers or model list; they are shown in Google AI Studio for your project (RPM, TPM, RPD; daily quota resets at midnight Pacific). LiteLLM id form: `gemini/<model-id>`; take the exact id from AI Studio.
+
+Runs on free tiers should use `--min-interval` (seconds between calls) and a larger `--retry-delay` to stay under per-minute limits.
