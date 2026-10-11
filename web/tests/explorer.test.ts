@@ -13,7 +13,7 @@ import {
 describe("explorer logic", () => {
   it("groups T4 items into Urdu+English pairs, Urdu first", () => {
     const units = toUnits(getItems("T4"));
-    expect(units).toHaveLength(30);
+    expect(units).toHaveLength(getItems("T4").items.length / 2);
     for (const u of units) {
       expect(u.items.map((i) => i.language)).toEqual(["ur", "en"]);
       expect(u.items[0].pair_id).toBe(u.items[1].pair_id);
