@@ -157,3 +157,99 @@ def test_read_sheet_skips_unfilled_rows_and_unknown_ids_fail(tmp_path):
         w.writerows(rows)
     with pytest.raises(ValueError, match="unknown item ids"):
         ingest_reviews(items, [paths["a"]])
+
+
+def test_sheet_hides_t2_category_and_shuffles_rows(tmp_path):
+    items = t3_items(40)
+    t2 = [
+        {"id": f"t2-{101 + i}", "task": "T2", "language": "roman-ur", "category": "sarcasm",
+         "question": f"jumla number {i}", "label_set": ["positive", "negative", "neutral"],
+         "answer": "negative", "source": "s", "license": "l", "difficulty": "hard", "validated": False}
+        for i in range(30)
+    ]
+    paths = export_review_sheets(items + t2 + t4_items(6), tmp_path, ["a", "b", "c"])
+    with paths["a"].open(encoding="utf-8-sig", newline="") as f:
+        rows = list(csv.DictReader(f))
+    assert all(r["category"] == "" for r in rows if r["task"] == "T2")
+    assert any(r["category"] for r in rows if r["task"] == "T3")  # other tasks keep context
+    ids = [r["item_id"] for r in rows if r["task"] == "T3"]
+    assert ids != sorted(ids)  # not in drafting order
+    # T4 members stay adjacent with Urdu first
+    t4 = [r for r in rows if r["task"] == "T4"]
+    for i in range(0, len(t4), 2):
+        assert t4[i]["language"] == "ur" and t4[i + 1]["language"] == "en"
+        assert t4[i]["item_id"].split("-")[1] == t4[i + 1]["item_id"].split("-")[1]
+    # same seed, same reviewer -> same order (reproducible exports)
+    again = export_review_sheets(items + t2 + t4_items(6), tmp_path / "x", ["a", "b", "c"])
+    assert again["a"].read_text("utf-8-sig") == paths["a"].read_text("utf-8-sig")
+
+
+openpyxl = pytest.importorskip("openpyxl")
+
+
+def _mixed_items():
+    t2 = [
+        {"id": f"t2-{101 + i}", "task": "T2", "language": "roman-ur", "category": "sarcasm",
+         "question": f"jumla {i}", "label_set": ["positive", "negative", "neutral"], "answer": "negative",
+         "source": "s", "license": "l", "difficulty": "hard", "validated": False}
+        for i in range(6)
+    ]
+    t1 = [
+        {"id": f"t1-{101 + i}", "task": "T1", "language": "ur", "category": "c", "passage": "لاہور پنجاب کا شہر ہے۔" * 2,
+         "question": "لاہور کہاں ہے؟", "answer": ["پنجاب"], "source": "s", "license": "l",
+         "difficulty": "easy", "validated": False}
+        for i in range(6)
+    ]
+    return t3_items(8) + t2 + t1 + t4_items(4)
+
+
+def test_xlsx_export_structure(tmp_path):
+    paths = export_review_sheets(_mixed_items(), tmp_path, ["a", "b", "c"], fmt="xlsx")
+    assert paths["a"].suffix == ".xlsx" and paths["key"].name == "answer_key.csv"
+    wb = openpyxl.load_workbook(paths["a"])
+    assert wb.sheetnames[0] == "Instructions"
+    assert {"T1 Reading", "T2 Roman Urdu", "T3 Culture", "T4 Urdu-English"} >= set(wb.sheetnames[1:])
+    ws = wb["T3 Culture"]
+    header = [c.value for c in ws[1]]
+    assert "answer" not in [h for h in header if h != "reviewer_answer"]  # no key column
+    dv_formulas = {d.formula1 for d in ws.data_validations.dataValidation}
+    assert '"A,B,C,D"' in dv_formulas and '"ok,reject"' in dv_formulas
+    q = header.index("question") + 1
+    assert ws.cell(row=2, column=q).alignment.readingOrder == 2  # Urdu cells are right-to-left
+    t2 = wb["T2 Roman Urdu"]
+    cat = [c.value for c in t2[1]].index("category") + 1
+    assert all(t2.cell(row=r, column=cat).value in (None, "") for r in range(2, t2.max_row + 1))
+
+
+def test_xlsx_round_trip_through_ingest(tmp_path):
+    items = _mixed_items()
+    key = {i["id"]: (i["answer"] if isinstance(i["answer"], str) else i["answer"][0]) for i in items}
+    paths = export_review_sheets(items, tmp_path, ["a", "b", "c"], sample_fraction=1.0, fmt="xlsx")
+    for name in ("a", "b", "c"):
+        wb = openpyxl.load_workbook(paths[name])
+        for ws in wb.worksheets[1:]:
+            header = [c.value for c in ws[1]]
+            ia, iv, ii = (header.index(h) + 1 for h in ("item_id", "reviewer_answer", "verdict"))
+            for r in range(2, ws.max_row + 1):
+                ws.cell(row=r, column=iv, value=key[ws.cell(row=r, column=ia).value])
+                ws.cell(row=r, column=ii, value="ok")
+        wb.save(paths[name])
+    outcome = ingest_reviews(items, [paths["a"], paths["b"], paths["c"]])
+    assert set(outcome.accepted) == set(key) and outcome.rejected == {}
+    assert read_sheet(paths["a"])[0].reviewer == "reviewer_a" or read_sheet(paths["a"])[0].reviewer == "a"
+
+
+def test_xlsx_unfilled_rows_are_skipped_and_reject_is_read(tmp_path):
+    items = t3_items(6)
+    paths = export_review_sheets(items, tmp_path, ["a", "b"], sample_fraction=1.0, fmt="xlsx")
+    assert read_sheet(paths["a"]) == []
+    wb = openpyxl.load_workbook(paths["a"])
+    ws = wb["T3 Culture"]
+    header = [c.value for c in ws[1]]
+    iv, ii, ik = (header.index(h) + 1 for h in ("verdict", "issue", "reviewer_answer"))
+    ws.cell(row=2, column=ik, value="B")
+    ws.cell(row=2, column=iv, value="reject")
+    ws.cell(row=2, column=ii, value="two-answers")
+    wb.save(paths["a"])
+    got = read_sheet(paths["a"])
+    assert len(got) == 1 and got[0].verdict == "reject" and got[0].issue == "two-answers" and got[0].answer == "B"

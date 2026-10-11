@@ -13,6 +13,7 @@ dependencies = ["jsonschema>=4.20"]
 dev = ["pytest>=8", "ruff>=0.6"]
 llm = ["litellm>=1.50"]
 gen = ["langgraph>=1.0"]
+review = ["openpyxl>=3.1"]
 
 [project.scripts]
 urdubench = "urdubench.cli:main"

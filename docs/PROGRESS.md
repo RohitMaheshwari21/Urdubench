@@ -1,5 +1,12 @@
 # Progress
 
+## Reviewer workbooks (Excel) for three reviewers; Drive route abandoned
+
+- `urdubench review export --format xlsx` writes one Excel workbook per reviewer: an Instructions tab, one tab per task, dropdowns for answer / verdict / issue, right-to-left layout for Urdu, text-typed cells. `review ingest` reads returned `.xlsx` or `.csv` files. 140 Python tests (new: structure, hidden key, round trip, unfilled rows, reject codes).
+- Blind-review fixes found while preparing the sheets: the Roman Urdu `category` column (sarcasm, negation, ...) hinted at the answer and rows were grouped by label. T2 categories are now hidden and each reviewer's rows are shuffled (T4 pairs stay together).
+- Three reviewers (`reviewer1` to `reviewer3`): 660 / 661 / 659 items each, every item seen by at least 2, 180 by all three. Files: `data/candidates/review/SEND_TO_REVIEWERS/` (private, gitignored). Mapping to the people is in `PRIVATE_README.txt` in the same folder.
+- **Google Drive route abandoned on purpose.** The Drive connector in this session is signed in as a different Google account (not one of the reviewers' or the owner's addresses). One pilot sheet (Roman Urdu sentences, no answers) was created there before this was noticed and was moved to that account's trash. No other item was uploaded. Excel workbooks are exact files with no re-typing and no third-party storage.
+
 ## Reviewer sheets exported; leak guard added
 
 - Five reviewer sheets (`reviewer1` to `reviewer5`) exported to `data/candidates/review/` (private, gitignored): 468 items each; every one of the 900 candidates is seen by at least 2 reviewers and 180 by all five (for Cohen's and Fleiss' kappa). Sheets contain no answers; `answer_key.csv` stays with the maintainer. Each reviewer needs roughly 2 to 3 hours.
