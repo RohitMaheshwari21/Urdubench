@@ -22,7 +22,7 @@ export default function Cite() {
       <Prose>
         <p>
           There is no paper yet. Until there is, please cite the repository and say which results you used (preliminary
-          dev split, dataset version 0.0.0 draft). Do not describe the numbers as final: the items have not been validated.
+          dev split; dataset version 0.1.0, provisional). Do not describe the numbers as final: the dev items have not been validated.
         </p>
         <CodeBlock label="BibTeX entry">{BIBTEX}</CodeBlock>
         <p>

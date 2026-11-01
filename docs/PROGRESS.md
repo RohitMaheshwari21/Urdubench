@@ -1,5 +1,22 @@
 # Progress
 
+## Reviews ingested: 626 of 900 candidates accepted (with data-quality caveats)
+
+- Three returned workbooks ingested (`data/candidates/review/returned/`, private). Output: `data/candidates/review/ingest/accepted.jsonl` and `validation_report.md` (private). The owner reports that each reviewer filled their sheet independently.
+- Accepted: T1 102 / 200, T2 137 / 200, T3 277 / 300, T4 110 / 200 (55 pairs). Rejected 274: 58 with 0/2 reviewers matching the key, 171 with 1/2, 1 with 1/3, 22 rejected by a reviewer, 22 failed with their T4 pair.
+- Agreement with key / mean Cohen's kappa / Fleiss' kappa: T1 0.61 / 0.34 / -0.50; T2 0.76 / 0.49 / 0.44; T3 0.95 / 0.88 / 0.88; T4 0.78 / 0.56 / 0.58.
+- **Anomalies recorded before ingest (not resolved):**
+  - reviewer1 and reviewer2 gave identical answers and verdicts on all 421 shared items. reviewer2's 85 disagreements with the key fall almost entirely (83) outside that overlap, and both sheets carry the same Urdu note verbatim. 241 accepted items rest on reviewer1 + reviewer2 only.
+  - reviewer3: many T1 answers are copied passage sentences rather than answers (9 / 146 match the key), T2 answers are mostly "neutral" (109 / 147), T4 answers often default to "A", and notes read "AI-assisted draft: answer requires human verification." Most T1 / T2 / T4 rejections come from reviewer3.
+  - reviewer1's file was returned as `review_reviewer.xlsx` and renamed to `review_reviewer1.xlsx` (content unchanged).
+- Because of these anomalies, agreement numbers should not be quoted as inter-annotator agreement in the dataset card without a caveat. Recommended before a 1.0 freeze: a short independent spot check (for example 100 accepted items) by one more native speaker.
+- **Test split frozen as v0.1.0 (provisional).** The 626 accepted items are in `data/test/` (private, gitignored); `data/MANIFEST.json` (public) holds counts and per-task checksums; `urdubench verify` passes. Accepted-set balance shifted with review: T2 neutral 59 / positive 41 / negative 37; T3 answer slots A 75 / B 66 / C 73 / D 63; T4 Urdu answers A 20 / B 7 / C 17 / D 11. Recorded in `data/DATASET_CARD.md`, with the agreement table and caveats.
+- Site text (about, methodology, cite) now says v0.1.0 provisional instead of "not validated / not frozen".
+- Offline backup of `data/candidates/` and `data/test/`: `C:\Users\Rohit Maheshwari\Documents\UrduBench-private-backup-2026-11-01.zip` (same computer; copy it to a USB drive or private cloud to make it a real backup).
+- **Security:** Next.js 16.4.0 had critical advisories (RCE in image optimization and in `use cache`, GHSA-2464-fhr4-w9xw, GHSA-673q-mjm6-r5xr) and the build refused to run. Bumped `next` and `eslint-config-next` to 16.4.3 and ran `npm audit fix` (undici). Production audit: 0 vulnerabilities. Dev-only ESLint chain findings remain as before.
+- Test fix: `test_cli_blocks_test_runs_on_an_unfrozen_repo` assumed the real repo had no manifest; it now uses a temporary unfrozen data folder. 140 Python tests, 21 web tests, lint, typecheck, build pass.
+- Not done: no model has been run on the test split. Groq's Data Controls setting must be confirmed in the console first (see `docs/limits.md`); never send the test split to the free Gemini tier.
+
 ## Reviewer workbooks (Excel) for three reviewers; Drive route abandoned
 
 - `urdubench review export --format xlsx` writes one Excel workbook per reviewer: an Instructions tab, one tab per task, dropdowns for answer / verdict / issue, right-to-left layout for Urdu, text-typed cells. `review ingest` reads returned `.xlsx` or `.csv` files. 140 Python tests (new: structure, hidden key, round trip, unfilled rows, reject codes).
