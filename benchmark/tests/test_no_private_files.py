@@ -28,3 +28,10 @@ def test_no_private_files_are_tracked():
 def test_only_gitkeep_is_tracked_under_data_test():
     extra = [f for f in tracked_files() if f.startswith("data/test/") and not f.endswith(".gitkeep")]
     assert extra == []
+
+
+@pytest.mark.skipif(shutil.which("git") is None or not (REPO / ".git").exists(), reason="needs a git checkout")
+def test_raw_test_split_runs_are_not_tracked():
+    bad = [f for f in tracked_files()
+           if (f.startswith("results/raw/") and f.endswith("-test.jsonl")) or f.startswith("results/items/test/")]
+    assert bad == []
