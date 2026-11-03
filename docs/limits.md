@@ -55,7 +55,11 @@ Sources: https://developers.facebook.com/docs/whatsapp/pricing, https://develope
 - **Not confirmed from these pages:** test number recipient limit, temporary token lifetime, and business verification steps for going live. The page says the temporary token expires quickly, so use a system user token. To be checked in Phase 8 from the Meta dashboard.
 
 ## Model and embedding prices
-Not chosen yet. Model, embedding provider and prices are decided in Phase 4 (benchmark models) and Phase 6/7 (live model and embedding). They must be verified from the provider pricing page at that time.
+Benchmark (Phase 4): Groq free tier, $0. Paid-tier list prices, read from `GET https://api.groq.com/openai/v1/models` on 2026-11-03, are in `results/test/COST.md`.
+
+Arena (Phase 6): the same four Groq models, with at most 350 output tokens per answer and two answers per question. At Groq's paid list prices the most expensive model (qwen3.8-27b: $0.80 in / $4.00 out per million tokens) costs about $0.0015 per answer, so `DAILY_SPEND_CAP=200` calls caps the worst case at roughly $0.30 a day. On the free tier the binding limit is Groq's per-minute and per-day rate limits; an over-limit call shows up as a 502 "model did not answer". Embedding provider: decided in Phase 7.
+
+Upstash budget for Phase 6: an uncached arena question costs about 13 Redis commands, a vote 4, a quiz answer 2. The 500K/month free quota covers about 30,000 arena questions a month, far above the daily cap.
 
 ## Local toolchain used for Phase 0
 Node 24.12, npm 11.6, Python 3.14.2 locally (package supports >=3.11, CI uses 3.11), Next.js 16.4.0, React 19.3.0, Vitest 5.0.3.

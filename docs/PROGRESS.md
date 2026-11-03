@@ -1,5 +1,46 @@
 # Progress
 
+## Phase 6: arena, voting, web quiz (code done and tested; waiting for Neon + Upstash keys)
+
+Built in `web/` (the pages stay static; only four small API routes run per request)
+- **Arena** (`/arena`, `POST /api/arena`, `POST /api/vote`): a question of up to 500 characters goes to two different models picked at random from the four Groq models (`lib/llm.ts`). The answers come back anonymous, the user votes A / B / both good / both bad, and the names are revealed. Settings come from a live probe: gpt-oss needs `reasoning_effort: low` and qwen `reasoning_format: hidden`, otherwise short answers are empty or time out. Each answer is capped at 350 output tokens with a 15-second timeout. The LLM is called with plain `fetch` to Groq's OpenAI-compatible API: no SDK in the function bundle, and the provider can be swapped with `LLM_BASE_URL`.
+- **Anti-abuse:** each battle is stored in Redis for 30 minutes and consumed with `GETDEL` on vote, so there is one vote per battle. The vote must come from the same session cookie (403 otherwise), and `votes.battle_id` is unique in Postgres as a second guard. Cross-site POSTs are refused (Origin check). Bodies are capped at 4 KB.
+- **Cost guards** (`lib/ratelimit.ts`): per client, 4 arena questions a minute and 40 a day; 20 votes and 60 quiz answers a minute. There is a global cap of `DAILY_SPEND_CAP` LLM calls per UTC day, which returns "come back tomorrow" (unset = arena off). Answers are cached for 24 hours under a hash of model + question, and cached answers do not count against the limits. Clients are identified for rate limiting by a salted hash of the IP, in counters that expire within a day.
+- **Quiz** (`/quiz`, `GET/POST /api/quiz`): 10 random questions from the 30 public dev T3 items (never the test split). The answer is checked on the server, the user gets instant feedback and a score at the end, and can share it with the share sheet or by copying. The quiz works even without a database.
+- **Database** (`drizzle/schema.ts`, migration `drizzle/migrations/0000_init.sql`): `users` (random UUID only), `votes` (model pair, winner, question length, never the text), `quiz_attempts` (item id, correct). Quiz questions are read from JSON.
+- **Privacy:** the privacy page is rewritten (one cookie, what is stored, provider, cache, IP hash), and `DELETE /api/me` with a button on the privacy page deletes the user and, by cascade, their votes and answers. The Urdu summary on that page was drafted by Claude and needs a native check.
+- **Ranking:** `lib/ranking.ts` has a Bradley-Terry fit (MM algorithm; ties and "both bad" count as half; a weak prior keeps a model that wins everything finite) and Elo for comparison. `npm run export-ranking` reads the votes (`DATABASE_URL`) and writes `results/arena.json`, which `sync-data` copies into the site. The home page shows the arena table, or "no votes yet".
+- Backends are chosen from env (`lib/services.ts`). A route whose backend is missing answers 503 "not switched on yet". `URDUBENCH_MEMORY_BACKEND=1` uses in-memory stores for local runs; it is ignored on Vercel (a test caught an early version leaking memory mode there).
+
+Checks
+- 61 web tests (new: ranking math, rate limits and the daily cap across UTC days, arena flow including caching, one vote per battle, another session's vote, 409 on duplicates, model failure, quiz checks, delete-my-data, service selection). Lint, typecheck and build pass.
+- Local end to end against `next start` with memory backends and the **real Groq models**:
+
+| Route | n | p50 | p95 | max |
+|---|---|---|---|---|
+| GET /api/quiz | 40 | 3 ms | 8 ms | 530 ms (first call) |
+| POST /api/quiz | 40 | 4 ms | 9 ms | 29 ms |
+| POST /api/arena (2 live model calls) | 4 | 509 ms | 845 ms | 845 ms |
+| POST /api/vote | 4 | 5 ms | 13 ms | 13 ms |
+
+  The 5th arena question in a minute got 429, a second vote on a battle got 404, and a cross-site POST got 403. Neon and Upstash add network round trips (expect tens of ms per call, plus a Neon cold start of up to about a second after 5 idle minutes). Re-measure on Vercel with `npm run measure -- https://urdubench.vercel.app`. Everything is far below the 300-second function limit; `/api/arena` sets `maxDuration = 30`.
+
+Needs from the owner (about 10 minutes), then Phase 6 is live
+1. In the Vercel dashboard for the UrduBench project: Storage → create **Neon** (Free) and **Upstash Redis** (Free) and connect them to the project. Vercel adds `DATABASE_URL` and the Upstash variables; both `UPSTASH_REDIS_REST_*` and the marketplace names `KV_REST_API_URL` / `KV_REST_API_TOKEN` are accepted.
+2. Add `LLM_API_KEY` (a Groq key), `DAILY_SPEND_CAP` (suggest 200) and `RATE_LIMIT_SALT` (any random string) in Vercel, and the same in `.env.local`.
+3. Locally: `cd web && npx vercel env pull .env.local` (or paste the values), then `npm run db:migrate`. Then redeploy.
+- The Vercel connector available to Claude in this session is signed in to a different account, so Claude did not create anything there.
+
+Not done: p95 measured on Vercel with the real backends; the first real votes. With few votes the ranking is noise, so it needs a pilot (Phase 9).
+
+## Phase 4 close-out: 4 models instead of 6 to 10 (owner's decision)
+
+- Groq's catalogue for this key has only four chat models (the rest are guard, speech and safety models). Adding OpenAI models would have sent the private test split to another provider and cost money, so the owner chose to **stay at 4 models**. This is a documented reduction from the plan's 6 to 10.
+- Reproduce command: `benchmark/README.md`, "Reproduce the published results".
+- Cost report: `results/test/COST.md` ($0 actual on the free tier; about $0.16 for all four at paid list prices; cost versus accuracy notes).
+- Findings: `results/test/analysis-test.md` and the Phase 4 entry below (5 findings).
+- `PLAN.md` is now saved in the repo root (copied from the owner's `URDU_BENCH_PROJECT_PLAN.md`).
+
 ## Phase 4: first models on the private test split (v0.1.0, provisional)
 
 Owner gave explicit consent to send the test split to Groq (Data Controls confirmed in the console). Four models, temperature 0, 400 output tokens (1500 for gpt-oss), 4 s between calls, 0 errors in 2,504 calls, cost $0 (free tier). Aggregates in `results/test/` (public); raw outputs in `results/test/raw/` stay private (gitignored).

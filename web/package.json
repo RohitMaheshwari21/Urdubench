@@ -9,7 +9,11 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "sync-data": "node scripts/sync-data.mjs"
+    "sync-data": "node scripts/sync-data.mjs",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "export-ranking": "node scripts/export-ranking.mjs",
+    "measure": "node scripts/measure-latency.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
