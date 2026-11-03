@@ -1,9 +1,10 @@
 // Measures route latency (p50 / p95 / max) against a running site and checks the main flows.
-//   node scripts/measure-latency.mjs http://localhost:3000 [quizRequests=40] [arenaBattles=4]
+//   node scripts/measure-latency.mjs http://localhost:3000 [quizRequests=40] [arenaBattles=4] [concurrency=1]
 // Arena battles make real model calls, so keep that number small (default 4 = the per-minute limit).
 const base = process.argv[2] ?? "http://localhost:3000";
 const nQuiz = Number(process.argv[3] ?? 40);
 const nArena = Number(process.argv[4] ?? 4);
+const concurrency = Number(process.argv[5] ?? 1);
 let cookie = "";
 
 async function call(method, path, body) {
@@ -28,11 +29,18 @@ function stats(name, xs) {
 
 const quizGet = [];
 const quizPost = [];
-for (let i = 0; i < nQuiz; i++) {
-  const g = await call("GET", "/api/quiz");
-  quizGet.push(g);
-  quizPost.push(await call("POST", "/api/quiz", { itemId: g.data.question.id, choice: "A" }));
-}
+// Load test: `concurrency` workers share the quiz requests (each worker plays like one browser).
+const t0 = performance.now();
+await Promise.all(
+  Array.from({ length: concurrency }, async (_, w) => {
+    for (let i = w; i < nQuiz; i += concurrency) {
+      const g = await call("GET", "/api/quiz");
+      quizGet.push(g);
+      quizPost.push(await call("POST", "/api/quiz", { itemId: g.data.question.id, choice: "A" }));
+    }
+  }),
+);
+console.log(`quiz: ${nQuiz * 2} requests, concurrency ${concurrency}, ${((nQuiz * 2) / ((performance.now() - t0) / 1000)).toFixed(0)} req/s`);
 stats("quiz GET", quizGet);
 stats("quiz POST", quizPost);
 
@@ -46,8 +54,10 @@ for (let i = 0; i < nArena; i++) {
 }
 if (arena.length) stats("arena", arena);
 if (votes.length) stats("vote", votes);
-const extra = await call("POST", "/api/arena", { prompt: "one more" });
-console.log(`arena after per-minute limit: ${extra.status} ${extra.data?.error ?? ""}`);
+if (nArena >= 4) {
+  const extra = await call("POST", "/api/arena", { prompt: "one more" });
+  console.log(`arena after per-minute limit: ${extra.status} ${extra.data?.error ?? ""}`);
+}
 if (votes[0]) {
   const again = await call("POST", "/api/vote", { battleId: arena[0].data.battleId, winner: "a" });
   console.log(`second vote on the same battle: ${again.status} ${again.data?.error ?? ""}`);

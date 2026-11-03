@@ -24,3 +24,6 @@ data/candidates/
 results/raw/**/*-test.jsonl
 results/items/test/
 results/test/raw/
+# RAG corpus: articles.jsonl is committed (source text + revision ids); chunks and vectors are regenerated
+data/rag/chunks.jsonl
+data/rag/index.jsonl

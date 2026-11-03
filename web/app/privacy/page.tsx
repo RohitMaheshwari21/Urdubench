@@ -51,18 +51,44 @@ export default function Privacy() {
         </p>
         <DeleteMyData />
 
+        <h2>Ask (question answering)</h2>
+        <p>Questions typed on the Ask page are not stored by us and are not linked to the cookie. To answer one:</p>
+        <ul>
+          <li>
+            The question is sent to Google&apos;s Gemini API (free tier) to find matching passages. Google says it may
+            use free-tier content to improve its products.
+          </li>
+          <li>The question and the matching passages are sent to Groq to write the answer.</li>
+          <li>
+            The answer is cached for up to 24 hours under a one-way hash of the question. Rate-limit counters work as
+            above.
+          </li>
+        </ul>
+        <p>Answers come from Urdu Wikipedia (CC BY-SA 4.0) with links to the articles used.</p>
+
         <h2>Hosting</h2>
         <p>
           The hosting service (Vercel) may keep ordinary server logs of requests (for example IP address and browser
           type) under its own policy. We do not use them to identify anyone.
         </p>
 
-        <h2>Before new features launch</h2>
-        <p>
-          A WhatsApp bot is planned. Before it goes live this page will say exactly what it stores. The intended design:
-          a hashed identifier instead of a phone number, no message text kept long term, and a STOP command that deletes
-          your data.
-        </p>
+        <h2>WhatsApp bot</h2>
+        <ul>
+          <li>
+            Your phone number is turned into a salted one-way hash. Only that hash, your chosen language, the quiz
+            question you are answering and your score are stored. Nothing is stored if you only read the help text.
+          </li>
+          <li>Message text is never stored or logged. Message ids are kept for 2 days to avoid answering twice.</li>
+          <li>
+            Messages starting with <code>ask</code> are handled like the Ask page above (sent to Google and Groq, not
+            stored).
+          </li>
+          <li>
+            Send <strong>stop</strong> at any time to delete everything stored for your number. The bot only replies
+            to you and never messages you first.
+          </li>
+          <li>WhatsApp (Meta) handles the messages themselves under its own terms.</li>
+        </ul>
 
         <h2 lang="ur" dir="rtl" className="urdu">
           مختصر اردو خلاصہ

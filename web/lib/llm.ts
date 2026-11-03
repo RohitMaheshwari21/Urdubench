@@ -22,14 +22,14 @@ const SYSTEM =
   "You are a helpful assistant. Reply in the same language and script as the user (Urdu, Roman Urdu or English). " +
   "Keep answers short (under 120 words). Do not give medical, legal or financial advice; say you can only give general information.";
 
-export type Chat = (model: ArenaModel, prompt: string) => Promise<string>;
+export type Chat = (model: ArenaModel, prompt: string, system?: string) => Promise<string>;
 
 export function groqChat(
   apiKey: string,
   baseUrl = "https://api.groq.com/openai/v1",
   fetchFn: typeof fetch = fetch,
 ): Chat {
-  return async (model, prompt) => {
+  return async (model, prompt, system = SYSTEM) => {
     const res = await fetchFn(`${baseUrl}/chat/completions`, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -38,7 +38,7 @@ export function groqChat(
         temperature: 0.7,
         max_tokens: MAX_OUTPUT_TOKENS,
         messages: [
-          { role: "system", content: SYSTEM },
+          { role: "system", content: system },
           { role: "user", content: prompt },
         ],
         ...model.extra,

@@ -2,9 +2,17 @@ import { Redis } from "@upstash/redis";
 import { dailySpendCap } from "./config";
 import { type KV, MemoryKV, UpstashKV } from "./kv";
 import { type Chat, groqChat } from "./llm";
+import { type Embed, fileRetriever, geminiEmbed, NeonRetriever, type Retriever } from "./retrieve";
 import { MemoryStore, NeonStore, type Store } from "./store";
 
-export type Services = { kv: KV | null; store: Store | null; chat: Chat | null; dailyCap: number };
+export type Services = {
+  kv: KV | null;
+  store: Store | null;
+  chat: Chat | null;
+  embed: Embed | null;
+  retriever: Retriever | null;
+  dailyCap: number;
+};
 
 let cached: Services | undefined;
 let memory: { kv: MemoryKV; store: MemoryStore } | undefined;
@@ -26,7 +34,14 @@ export function getServices(env: NodeJS.ProcessEnv = process.env): Services {
   const store = env.DATABASE_URL ? new NeonStore(env.DATABASE_URL) : (mem?.store ?? null);
   const chat = env.LLM_API_KEY ? groqChat(env.LLM_API_KEY, env.LLM_BASE_URL || undefined) : null;
 
-  const s = { kv, store, chat, dailyCap: dailySpendCap(env) };
+  const embed = env.EMBEDDING_API_KEY ? geminiEmbed(env.EMBEDDING_API_KEY) : null;
+  const retriever = env.DATABASE_URL
+    ? new NeonRetriever(env.DATABASE_URL)
+    : useMemory && env.URDUBENCH_LOCAL_INDEX
+      ? fileRetriever(env.URDUBENCH_LOCAL_INDEX)
+      : null;
+
+  const s = { kv, store, chat, embed, retriever, dailyCap: dailySpendCap(env) };
   if (env === process.env) cached = s;
   return s;
 }

@@ -13,7 +13,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "export-ranking": "node scripts/export-ranking.mjs",
-    "measure": "node scripts/measure-latency.mjs"
+    "measure": "node scripts/measure-latency.mjs",
+    "load-index": "node scripts/load-index.mjs",
+    "export-usage": "node scripts/export-usage.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",

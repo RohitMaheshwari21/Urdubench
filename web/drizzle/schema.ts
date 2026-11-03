@@ -1,4 +1,4 @@
-import { boolean, index, integer, pgTable, serial, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, serial, text, timestamp, uuid, vector } from "drizzle-orm/pg-core";
 
 // Privacy: no names, emails, IPs or prompt text. A user is a random anonymous id from a cookie.
 
@@ -39,3 +39,30 @@ export const quizAttempts = pgTable(
   },
   (t) => [index("quiz_attempts_user_idx").on(t.userId)],
 );
+
+// Phase 7: Urdu Wikipedia chunks (CC BY-SA 4.0) for /api/ask, loaded offline by scripts/load-index.mjs.
+// 768 dims = gemini-embedding-001 with outputDimensionality 768, L2-normalized (same as benchmark/urdubench/rag).
+export const docChunks = pgTable(
+  "doc_chunks",
+  {
+    id: text("id").primaryKey(),
+    title: text("title").notNull(),
+    section: text("section").notNull(),
+    url: text("url").notNull(),
+    text: text("text").notNull(),
+    embedding: vector("embedding", { dimensions: 768 }).notNull(),
+  },
+  (t) => [index("doc_chunks_embedding_idx").using("hnsw", t.embedding.op("vector_cosine_ops"))],
+);
+
+// Phase 8: WhatsApp bot state. The id is a salted SHA-256 of the phone number; the number itself and
+// message text are never stored. STOP deletes the row.
+export const waUsers = pgTable("wa_users", {
+  id: text("id").primaryKey(),
+  language: text("language", { enum: ["ur", "roman", "en"] }).notNull().default("roman"),
+  currentItem: text("current_item"),
+  answered: integer("answered").notNull().default(0),
+  correct: integer("correct").notNull().default(0),
+  streak: integer("streak").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
